@@ -20,7 +20,7 @@ public class Main {
     public static void main(String[] args) {
         FileManager.get().addLocatorClassLoader(Main.class.getClassLoader());
         model = FileManager.get().loadModel(RDF_FILE);
-        getSemantics("Sr_Software_Engineer", "Cupertino", "Entry_Level", "100000", "Masters");
+        getSemantics("Sr_Software_Engineer", "Cupertino", "Entry_Level", "100000", "Masters", "C");
     }
 
     /**
@@ -201,6 +201,31 @@ public class Main {
     }
 
     /**
+     * This method gets similar programming languages related based on the technologies they are used in.
+     * If two programming languages are used in a same technology then they are considered related here.
+     * @param progLang the programming language whose related languages needs to be found
+     * @return a list of related languages.
+     */
+    public static List<String> getRelatedProgLang(String progLang){
+        List<String> relatedLang = new ArrayList<>();
+        List<String> param = new ArrayList<>();
+        relatedLang.add(progLang);
+        param.add("pl");
+
+        String queryString =
+                "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>" +
+                        "PREFIX job-ontology: <"+ PREFIX_JOB_OWL +">" +
+                        "SELECT * WHERE {"+
+                        "job-ontology:"+progLang + " job-ontology:isUsedIn ?tech ." +
+                        "?pl job-ontology:isUsedIn ?tech"+
+                        "}";
+        relatedLang.addAll(execSparql(queryString, param));
+        relatedLang = removeDuplicates(relatedLang);
+
+        return  relatedLang;
+    }
+
+    /**
      * This method gets the semantic matching results from the various methods called in here and loads them into a HashMap.
      * @param pos job position name.
      * @param loc job location city.
@@ -208,16 +233,23 @@ public class Main {
      * @param sal Average pay for a given job role.
      * @param edu Education requirement.
      */
-    public static void getSemantics(String pos, String loc, String exp, String sal, String edu){
+    public static void getSemantics(String pos, String loc, String exp, String sal, String edu, String progLang){
 //        model.write(System.out, "RDF/XML");
-        Map<String, List<String>> resultMap = new LinkedHashMap<String, List<String>>();
+        Map<String, List<String>> resultMap = new HashMap<>();
 
+        if(loc!=null && loc!="")
+            resultMap.put("location", getNearLocations(loc));
+        if(pos!=null && pos!="")
+            resultMap.put("jobs-pos", getSimilarPositions(pos));
+        if(exp!=null && exp!="")
+            resultMap.put("jobs-exp", getSimilarExpJob(exp));
+        if(sal!=null && sal!="")
+            resultMap.put("jobs-sal", getSimilarPayJob(sal));
+        if(edu!=null && edu!="")
+            resultMap.put("jobs-edu", getSimilarDegreeJob(edu));
+        if(progLang!=null && !progLang.isEmpty())
+            resultMap.put("prog-lang", getRelatedProgLang(progLang));
 
-        resultMap.put("location", getNearLocations(loc));
-        resultMap.put("jobs-pos", getSimilarPositions(pos));
-        resultMap.put("jobs-exp", getSimilarExpJob(exp));
-        resultMap.put("jobs-sal", getSimilarPayJob(sal));
-        resultMap.put("jobs-edu", getSimilarDegreeJob(edu));
         System.out.println(resultMap);
     }
 }
